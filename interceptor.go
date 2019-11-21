@@ -13,10 +13,15 @@ import (
 
 //拦截器
 func interceptor(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		if rec := recover(); rec != nil {
+			fmt.Println("panic recover", rec)
+		}
+	}()
 	now := time.Now().Format("2006-01-02 15:04:05")
 	ip := RemoteIp(r)
-	if r.Method!="POST" {
-		fmt.Println(now,ip,"request method is",r.Method)
+	if r.Method != "POST" {
+		fmt.Println(now, ip, "request method is", r.Method)
 		return
 	}
 	RequestURI := r.RequestURI
@@ -26,7 +31,7 @@ func interceptor(w http.ResponseWriter, r *http.Request) {
 	if index > -1 {
 		RequestURI = RequestURI[:index]
 	}
-	reqStr,reqMap, err := decodeRequest(r)
+	reqStr, reqMap, err := decodeRequest(r)
 	if err != nil {
 		fmt.Println("decodeRequest:", reqStr, err)
 		return
@@ -56,14 +61,14 @@ func Apply(value_f reflect.Value, methodName string, args []interface{}) []refle
 }
 
 //格式化参数
-func decodeRequest(r *http.Request) (string,map[string]string, error) {
+func decodeRequest(r *http.Request) (string, map[string]string, error) {
 	defer r.Body.Close()
-	reqBytes,err:=ioutil.ReadAll(r.Body)
+	reqBytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		return "",nil,err
+		return "", nil, err
 	}
-	reqMap,err:=json2Map(reqBytes)
-	return string(reqBytes),reqMap,err
+	reqMap, err := json2Map(reqBytes)
+	return string(reqBytes), reqMap, err
 }
 
 //获取ip

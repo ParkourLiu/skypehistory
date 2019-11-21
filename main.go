@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	PORT = "0.0.0.0:8888"
+	PORT = "0.0.0.0:8889"
 )
 
 var (
