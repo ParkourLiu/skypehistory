@@ -3,14 +3,15 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
 )
 
 //执行post请求
-func DoBytesPost(url string, post []byte) (interface{}, error) {
+func DoBytesPost(method string, url string, headMap map[string]string, post []byte) ([]byte, error) {
 	body := bytes.NewReader(post)
-	request, err := http.NewRequest("GET", url, body)
+	request, err := http.NewRequest(method, url, body)
 	if request != nil {
 		if request.Body != nil {
 			defer func() {
@@ -22,7 +23,10 @@ func DoBytesPost(url string, post []byte) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	request.Header.Set("Content-Type", "application/json")
+	//request.Header.Set("Content-Type", "application/json")
+	for k, v := range headMap {
+		request.Header[k] = []string{v}
+	}
 	var resp *http.Response
 	resp, err = http.DefaultClient.Do(request)
 	if resp != nil {
@@ -36,16 +40,35 @@ func DoBytesPost(url string, post []byte) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	if resp.StatusCode != 200 { //请求不成功
+		return nil, errors.New(resp.Status)
+	}
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
-	reqMap, _ := jsonMap(b)
-	return reqMap, err
+	return b, err
 }
 
-func jsonMap(strByte []byte) (interface{}, error) {
-	var dat interface{}
+func json2GetHistoryStuct(strByte []byte) (GetHistoryStuct, error) {
+	var dat GetHistoryStuct
+	if err := json.Unmarshal(strByte, &dat); err == nil {
+		return dat, nil
+	} else {
+		return dat, err
+	}
+}
+func json2GetFriendsStuct(strByte []byte) (GetFriendsStuct, error) {
+	var dat GetFriendsStuct
+	if err := json.Unmarshal(strByte, &dat); err == nil {
+		return dat, nil
+	} else {
+		return dat, err
+	}
+}
+
+func json2AllContacts(strByte []byte) (AllContacts, error) {
+	var dat AllContacts
 	if err := json.Unmarshal(strByte, &dat); err == nil {
 		return dat, nil
 	} else {

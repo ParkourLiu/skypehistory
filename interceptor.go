@@ -16,12 +16,18 @@ func interceptor(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if rec := recover(); rec != nil {
 			fmt.Println("panic recover", rec)
+			errMsg, _ := json.Marshal(&ReturnData{Code: "500", Msg: fmt.Sprint(rec)})
+			w.Write(errMsg)
+			return
 		}
 	}()
+
 	now := time.Now().Format("2006-01-02 15:04:05")
 	ip := RemoteIp(r)
 	if r.Method != "POST" {
 		fmt.Println(now, ip, "request method is", r.Method)
+		errMsg, _ := json.Marshal(&ReturnData{Code: "500", Msg: fmt.Sprint("request method is " + r.Method)})
+		w.Write(errMsg)
 		return
 	}
 	RequestURI := r.RequestURI
@@ -34,6 +40,8 @@ func interceptor(w http.ResponseWriter, r *http.Request) {
 	reqStr, reqMap, err := decodeRequest(r)
 	if err != nil {
 		fmt.Println("decodeRequest:", reqStr, err)
+		errMsg, _ := json.Marshal(&ReturnData{Code: "500", Msg: err.Error()})
+		w.Write(errMsg)
 		return
 	}
 
@@ -41,6 +49,8 @@ func interceptor(w http.ResponseWriter, r *http.Request) {
 	jsonBytes, err := json.Marshal(ret1[0].Interface())               //json化
 	if err != nil {
 		fmt.Println("json.Marshal:", err)
+		errMsg, _ := json.Marshal(&ReturnData{Code: "500", Msg: err.Error()})
+		w.Write(errMsg)
 		return
 	}
 	_, err = w.Write(jsonBytes)
@@ -61,13 +71,13 @@ func Apply(value_f reflect.Value, methodName string, args []interface{}) []refle
 }
 
 //格式化参数
-func decodeRequest(r *http.Request) (string, map[string]string, error) {
+func decodeRequest(r *http.Request) (string, ReqData, error) {
 	defer r.Body.Close()
 	reqBytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		return "", nil, err
+		return "", ReqData{}, err
 	}
-	reqMap, err := json2Map(reqBytes)
+	reqMap, err := json2ReqData(reqBytes)
 	return string(reqBytes), reqMap, err
 }
 
@@ -88,8 +98,8 @@ func RemoteIp(r *http.Request) string {
 	}
 	return remoteAddr
 }
-func json2Map(strByte []byte) (map[string]string, error) {
-	var dat map[string]string
+func json2ReqData(strByte []byte) (ReqData, error) {
+	var dat ReqData
 	if err := json.Unmarshal(strByte, &dat); err == nil {
 		return dat, nil
 	} else {
